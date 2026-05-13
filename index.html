@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>剑三小号管理工具</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="app-wrapper">
+        <header class="top-header">
+            <div class="header-left">
+                <div class="app-logo">
+                    <span class="logo-icon">⚔️</span>
+                    <span class="logo-text">JX3 Manager</span>
+                </div>
+            </div>
+            
+            <nav class="main-nav">
+                <button onclick="switchView('home')" id="navHome" class="nav-tab active">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-label">主页</span>
+                </button>
+                <button onclick="switchView('characters')" id="navCharacters" class="nav-tab">
+                    <span class="nav-icon">👥</span>
+                    <span class="nav-label">角色统计</span>
+                </button>
+                <button onclick="switchView('tasks')" id="navTasks" class="nav-tab">
+                    <span class="nav-icon">📋</span>
+                    <span class="nav-label">任务统计</span>
+                </button>
+                <button onclick="switchView('salary')" id="navSalary" class="nav-tab">
+                    <span class="nav-icon">💎</span>
+                    <span class="nav-label">工资记录</span>
+                </button>
+                <button onclick="switchView('table')" id="navTable" class="nav-tab">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-label">数据表格</span>
+                </button>
+                <button onclick="switchView('gold')" id="navGold" class="nav-tab">
+                    <span class="nav-icon">💰</span>
+                    <span class="nav-label">金币数据</span>
+                </button>
+            </nav>
+            
+            <div class="header-right">
+                <div id="authStatus" class="user-badge">未登录</div>
+                <div class="user-actions">
+                    <button onclick="exportData()" id="btnExport" style="display: none;" class="icon-btn">📤</button>
+                    <button onclick="importData()" id="btnImport" style="display: none;" class="icon-btn">📥</button>
+                    <button onclick="syncToCloud()" id="btnSync" style="display: none;" class="icon-btn">☁️</button>
+                    <button onclick="signOut()" id="btnSignOut" style="display: none;" class="icon-btn">🚪</button>
+                </div>
+            </div>
+        </header>
+
+        <div class="stats-strip">
+            <div class="stat-box">
+                <div class="stat-icon-wrap gold">💰</div>
+                <div class="stat-details">
+                    <span class="stat-title">总金币</span>
+                    <span class="stat-number" id="totalGold">0</span>
+                </div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon-wrap characters">👤</div>
+                <div class="stat-details">
+                    <span class="stat-title">总角色</span>
+                    <span class="stat-number" id="totalChars">0</span>
+                </div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon-wrap accounts">📁</div>
+                <div class="stat-details">
+                    <span class="stat-title">总账号</span>
+                    <span class="stat-number" id="totalAccounts">0</span>
+                </div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon-wrap completed">✅</div>
+                <div class="stat-details">
+                    <span class="stat-title">今日完成</span>
+                    <span class="stat-number" id="todayCompleted">0</span>
+                </div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon-wrap salary">💎</div>
+                <div class="stat-details">
+                    <span class="stat-title">本周工资</span>
+                    <span class="stat-number" id="stripWeekSalary">0</span>
+                </div>
+            </div>
+            <span id="syncStatus" class="sync-indicator"></span>
+        </div>
+
+        <main class="main-container">
+            <div id="authPanel" class="auth-overlay">
+                <div class="auth-card">
+                    <div class="auth-logo">⚔️</div>
+                    <h2>剑三小号管理工具</h2>
+                    <p class="auth-desc">登录后数据将自动同步到云端</p>
+                    
+                    <div class="auth-tabs">
+                        <button onclick="showLogin()" id="tabLogin" class="auth-tab active">登录</button>
+                        <button onclick="showSignUp()" id="tabSignUp" class="auth-tab">注册</button>
+                    </div>
+                    
+                    <div id="loginForm">
+                        <div class="input-group">
+                            <label>邮箱</label>
+                            <input type="email" id="loginEmail" placeholder="请输入邮箱">
+                        </div>
+                        <div class="input-group">
+                            <label>密码</label>
+                            <input type="password" id="loginPassword" placeholder="请输入密码">
+                        </div>
+                        <button onclick="handleLogin()" class="btn btn-primary btn-block">登录</button>
+                    </div>
+                    
+                    <div class="auth-divider">
+                        <span>或</span>
+                    </div>
+                    
+                    <button onclick="enterOfflineMode()" class="btn btn-secondary btn-block">离线模式（本地存储）</button>
+                    
+                    <div id="signupForm" style="display: none;">
+                        <div class="input-group">
+                            <label>邮箱</label>
+                            <input type="email" id="signupEmail" placeholder="请输入邮箱">
+                        </div>
+                        <div class="input-group">
+                            <label>密码</label>
+                            <input type="password" id="signupPassword" placeholder="请输入密码（至少6位）">
+                        </div>
+                        <div class="input-group">
+                            <label>确认密码</label>
+                            <input type="password" id="signupPasswordConfirm" placeholder="请再次输入密码">
+                        </div>
+                        <button onclick="handleSignUp()" class="btn btn-primary btn-block">注册</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="mainView">
+                <div id="viewHome" class="view-panel active">
+                    <div class="panel-header">
+                        <h2 id="currentAccountTitle">主页</h2>
+                        <div class="header-actions">
+                            <button onclick="showAddAccountModal()" class="btn btn-outline">
+                                <span>+</span> 添加账号
+                            </button>
+                            <button onclick="showAddCharModal()" class="btn btn-primary">
+                                <span>+</span> 添加角色
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="split-view">
+                        <aside class="accounts-sidebar">
+                            <h3>账号列表</h3>
+                            <div id="accountList" class="account-list"></div>
+                        </aside>
+                        
+                        <section class="content-area">
+                            <div class="toolbar">
+                                <button onclick="showAllCharacters()" id="btnAllChars" class="filter-chip active">全部角色</button>
+                                <div class="filter-chips">
+                                    <button onclick="filterByServer('唯满侠')" class="filter-chip" data-server="唯满侠">唯满侠</button>
+                                    <button onclick="filterByServer('双梦')" class="filter-chip" data-server="双梦">双梦</button>
+                                    <button onclick="filterByServer('幽月轮')" class="filter-chip" data-server="幽月轮">幽月轮</button>
+                                    <button onclick="filterByServer('斗转星移')" class="filter-chip" data-server="斗转星移">斗转星移</button>
+                                </div>
+                            </div>
+                            <div id="charList" class="cards-grid"></div>
+                        </section>
+                    </div>
+                </div>
+
+                <div id="viewCharacters" class="view-panel">
+                    <div class="panel-header">
+                        <h2>角色统计</h2>
+                    </div>
+                    
+                    <div class="filter-row">
+                        <select id="filterSchoolStats" onchange="renderCharacterStats()" class="select-field">
+                            <option value="">全部门派</option>
+                            <option value="少林">少林</option>
+                            <option value="七秀">七秀</option>
+                            <option value="天策">天策</option>
+                            <option value="纯阳">纯阳</option>
+                            <option value="万花">万花</option>
+                            <option value="藏剑">藏剑</option>
+                            <option value="五毒">五毒</option>
+                            <option value="唐门">唐门</option>
+                            <option value="明教">明教</option>
+                            <option value="丐帮">丐帮</option>
+                            <option value="苍云">苍云</option>
+                            <option value="长歌">长歌</option>
+                            <option value="霸刀">霸刀</option>
+                            <option value="蓬莱">蓬莱</option>
+                            <option value="凌雪阁">凌雪阁</option>
+                            <option value="衍天宗">衍天宗</option>
+                            <option value="北天药宗">北天药宗</option>
+                            <option value="刀宗">刀宗</option>
+                            <option value="万灵山庄">万灵山庄</option>
+                            <option value="段氏">段氏</option>
+                        </select>
+                        <select id="filterServerStats" onchange="renderCharacterStats()" class="select-field">
+                            <option value="">全部服务器</option>
+                            <option value="唯满侠">唯满侠</option>
+                            <option value="双梦">双梦</option>
+                            <option value="幽月轮">幽月轮</option>
+                            <option value="斗转星移">斗转星移</option>
+                        </select>
+                        <select id="sortByStats" onchange="renderCharacterStats()" class="select-field">
+                            <option value="gear">装分从高到低</option>
+                            <option value="gear-asc">装分从低到高</option>
+                            <option value="gold">金币从高到低</option>
+                            <option value="gold-asc">金币从低到高</option>
+                        </select>
+                    </div>
+                    
+                    <div id="charStatsList" class="cards-grid"></div>
+                </div>
+
+                <div id="viewTasks" class="view-panel">
+                    <div class="panel-header">
+                        <h2>任务统计</h2>
+                        <div class="header-actions">
+                            <button onclick="showAddTaskModal()" class="btn btn-primary">
+                                <span>+</span> 添加任务
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-cards">
+                        <div class="summary-card daily">
+                            <div class="summary-icon">☀️</div>
+                            <div class="summary-info">
+                                <span class="summary-title">日常任务</span>
+                                <span class="summary-num" id="dailyTaskCount">0</span>
+                            </div>
+                        </div>
+                        <div class="summary-card weekly">
+                            <div class="summary-icon">📅</div>
+                            <div class="summary-info">
+                                <span class="summary-title">周常任务</span>
+                                <span class="summary-num" id="weeklyTaskCount">0</span>
+                            </div>
+                        </div>
+                        <div class="summary-card raid">
+                            <div class="summary-icon">⚔️</div>
+                            <div class="summary-info">
+                                <span class="summary-title">十人周常</span>
+                                <span class="summary-num" id="weekly10TaskCount">0</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="task-board">
+                        <div class="task-column">
+                            <div class="column-header daily-header">
+                                <div class="column-header-left">
+                                    <span class="column-icon">☀️</span>
+                                    <span class="column-title">日常</span>
+                                </div>
+                                <div class="column-header-right">
+                                    <span class="column-count" id="dailyColCount">0</span>
+                                    <button onclick="resetAllTasks('daily')" class="reset-btn" title="重置所有日常任务">🔄</button>
+                                </div>
+                            </div>
+                            <div id="dailyTaskList" class="task-list"></div>
+                        </div>
+                        <div class="task-column">
+                            <div class="column-header weekly-header">
+                                <div class="column-header-left">
+                                    <span class="column-icon">📅</span>
+                                    <span class="column-title">周常</span>
+                                </div>
+                                <div class="column-header-right">
+                                    <span class="column-count" id="weeklyColCount">0</span>
+                                    <button onclick="resetAllTasks('weekly')" class="reset-btn" title="重置所有周常任务">🔄</button>
+                                </div>
+                            </div>
+                            <div id="weeklyTaskList" class="task-list"></div>
+                        </div>
+                        <div class="task-column">
+                            <div class="column-header raid-header">
+                                <div class="column-header-left">
+                                    <span class="column-icon">⚔️</span>
+                                    <span class="column-title">十人周常</span>
+                                </div>
+                                <div class="column-header-right">
+                                    <span class="column-count" id="weekly10ColCount">0</span>
+                                    <button onclick="resetAllTasks('weekly10')" class="reset-btn" title="重置所有十人周常任务">🔄</button>
+                                </div>
+                            </div>
+                            <div id="weekly10TaskList" class="task-list"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="viewGold" class="view-panel">
+                    <div class="panel-header">
+                        <h2>金币数据</h2>
+                        <div class="header-actions">
+                            <button onclick="showAddGoldModal()" class="btn btn-primary">
+                                <span>+</span> 记录金币
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="gold-stats-row">
+                        <div class="gold-stat-card">
+                            <span class="gold-stat-label">当前总金币</span>
+                            <span class="gold-stat-value" id="currentTotalGold">0</span>
+                            <span class="gold-stat-unit">金</span>
+                        </div>
+                        <div class="gold-stat-card">
+                            <span class="gold-stat-label">本周收入</span>
+                            <span class="gold-stat-value green" id="weekIncome">+0</span>
+                            <span class="gold-stat-unit">金</span>
+                        </div>
+                        <div class="gold-stat-card">
+                            <span class="gold-stat-label">本周支出</span>
+                            <span class="gold-stat-value red" id="weekExpense">-0</span>
+                            <span class="gold-stat-unit">金</span>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <h3>金币趋势</h3>
+                        <canvas id="goldChart"></canvas>
+                    </div>
+                    
+                    <div class="history-section">
+                        <h3>历史记录</h3>
+                        <div id="goldHistory" class="history-list"></div>
+                    </div>
+                </div>
+
+                <div id="viewSalary" class="view-panel">
+                    <div class="panel-header">
+                        <h2>工资记录</h2>
+                        <div class="header-actions">
+                            <button onclick="showAddSalaryModal()" class="btn btn-primary">
+                                <span>+</span> 添加工资
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-row">
+                        <select id="salaryCharFilter" onchange="renderSalaryList()" class="select-field">
+                            <option value="">全部角色</option>
+                        </select>
+                        <select id="salaryWeekFilter" onchange="renderSalaryList()" class="select-field">
+                            <option value="">全部时间</option>
+                        </select>
+                    </div>
+                    
+                    <div class="salary-stats-row">
+                        <div class="salary-stat-card week">
+                            <span class="salary-stat-label">本周工资</span>
+                            <span class="salary-stat-value green" id="weekSalary">0</span>
+                            <span class="salary-stat-unit">金</span>
+                        </div>
+                        <div class="salary-stat-card month">
+                            <span class="salary-stat-label">本月工资</span>
+                            <span class="salary-stat-value orange" id="monthSalary">0</span>
+                            <span class="salary-stat-unit">金</span>
+                        </div>
+                        <div class="salary-stat-card total">
+                            <span class="salary-stat-label">总工资</span>
+                            <span class="salary-stat-value gold" id="totalSalary">0</span>
+                            <span class="salary-stat-unit">金</span>
+                        </div>
+                    </div>
+                    
+                    <div class="salary-container">
+                        <div id="salaryList" class="salary-list"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="viewTable" class="view-panel">
+                <div class="section-header">
+                    <h2>📊 数据表格</h2>
+                    <p>所有角色数据统计一览</p>
+                </div>
+                
+                <div class="table-toolbar">
+                    <div class="table-filters">
+                        <select id="tableAccountFilter" onchange="renderDataTable()" class="filter-select">
+                            <option value="">全部账号</option>
+                        </select>
+                        <select id="tableServerFilter" onchange="renderDataTable()" class="filter-select">
+                            <option value="">全部服务器</option>
+                            <option value="唯满侠">唯满侠</option>
+                            <option value="双梦">双梦</option>
+                            <option value="幽月轮">幽月轮</option>
+                            <option value="斗转星移">斗转星移</option>
+                        </select>
+                        <select id="tableSchoolFilter" onchange="renderDataTable()" class="filter-select">
+                            <option value="">全部门派</option>
+                        </select>
+                    </div>
+                    <div class="table-actions">
+                        <button onclick="renderDataTable()" class="btn btn-secondary btn-sm">
+                            🔄 刷新
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <div class="table-wrapper">
+                        <table id="dataTable" class="data-table">
+                            <thead>
+                                <tr id="tableHeaderRow">
+                                    <th>账号</th>
+                                    <th>角色</th>
+                                    <th>门派</th>
+                                    <th>服务器</th>
+                                    <th class="sortable" onclick="sortTable('score')">装分 ↑↓</th>
+                                    <th class="sortable" onclick="sortTable('gold')">金币 ↑↓</th>
+                                    <th>本周工资</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="table-summary">
+                    <div class="summary-row">
+                        <span class="summary-label">📊 总装分</span>
+                        <span class="summary-value" id="totalAf">0</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">💰 总金币</span>
+                        <span class="summary-value" id="totalGc">0</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">💎 本周工资</span>
+                        <span class="summary-value" id="totalWs">0</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">👥 角色数</span>
+                        <span class="summary-value" id="totalChars">0</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="modalContainer"></div>
+    
+    <div id="modalOverlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">标题</h3>
+                <button onclick="closeModal()" class="modal-close">×</button>
+            </div>
+            <div id="modalBody" class="modal-body"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
